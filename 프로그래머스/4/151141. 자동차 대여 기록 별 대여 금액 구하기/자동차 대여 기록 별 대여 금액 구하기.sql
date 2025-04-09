@@ -1,0 +1,33 @@
+WITH history AS (
+    SELECT 
+        HISTORY_ID, CAR_ID, (DATEDIFF(END_DATE, START_DATE) + 1) AS DATE_DIFF,
+        CASE
+            WHEN (DATEDIFF(END_DATE, START_DATE) + 1) >= 90 THEN '90일 이상'
+            WHEN (DATEDIFF(END_DATE, START_DATE) + 1) >= 30 THEN '30일 이상'
+            WHEN (DATEDIFF(END_DATE, START_DATE) + 1) >= 7 THEN '7일 이상'
+            ELSE '할인없음'
+        END AS DURATION_TYPE
+    FROM
+        CAR_RENTAL_COMPANY_RENTAL_HISTORY),   
+    discount AS (
+    SELECT CAR_TYPE, DURATION_TYPE, DISCOUNT_RATE
+    FROM CAR_RENTAL_COMPANY_DISCOUNT_PLAN
+    WHERE CAR_TYPE = '트럭')    
+SELECT
+    h.HISTORY_ID,
+    CASE
+        WHEN h.DURATION_TYPE = '할인없음'
+        THEN FLOOR(c.DAILY_FEE  * h.DATE_DIFF)
+        ELSE FLOOR((c.DAILY_FEE * (1 - 0.01 * d.DISCOUNT_RATE) * h.DATE_DIFF))
+    END AS FEE    
+FROM
+    history h
+    LEFT JOIN CAR_RENTAL_COMPANY_CAR c
+    ON h.CAR_ID = c.CAR_ID
+    LEFT JOIN discount d
+    ON h.DURATION_TYPE = d.DURATION_TYPE
+WHERE
+    c.CAR_TYPE = '트럭'
+ORDER BY
+    FEE DESC,
+    h.HISTORY_ID DESC;
